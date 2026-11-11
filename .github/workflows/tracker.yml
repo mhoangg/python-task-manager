@@ -1,0 +1,10 @@
+name: GitHub Projects Automation
+
+'on':
+  pull_request:
+    types: [closed]
+
+jobs:
+  move-issue-to-done:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
