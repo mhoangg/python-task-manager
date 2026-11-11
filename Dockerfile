@@ -10,4 +10,4 @@ COPY . /app
 
 RUN chmod +x /app/.github/scripts/entrypoint.sh
 
-ENTRYPOINT ["/app/.github/scripts/entrypoint.sh"]
+ENTRYPOINT ["bash", "/app/.github/scripts/entrypoint.sh"]
