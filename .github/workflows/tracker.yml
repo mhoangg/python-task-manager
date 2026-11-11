@@ -1,12 +1,9 @@
+
 name: GitHub Projects Automation
 
 'on':
   pull_request:
-    types:
-      - closed
-
-permissions:
-  contents: read
+    types: [closed]
 
 jobs:
   move-issue-to-done:
@@ -56,10 +53,6 @@ jobs:
 
             const issues =
               data.repository.pullRequest.closingIssuesReferences.nodes;
-
-            if (issues.length === 0) {
-              core.info("No linked issues found.");
-            }
 
             for (const issue of issues) {
               for (const item of issue.projectItems.nodes) {
