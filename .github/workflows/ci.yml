@@ -1,0 +1,21 @@
+
+name: CI Workflow - Docker
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: docker build -t task-manager:latest .
+
+      - name: Run Docker Container
+        run: docker run --rm task-manager:latest
