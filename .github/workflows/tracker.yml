@@ -1,0 +1,103 @@
+
+name: GitHub Projects Automation
+
+'on':
+  pull_request:
+    types: [closed]
+
+jobs:
+  move-issue-to-done:
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Move linked issues to Done
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+
+            const data = await github.graphql(`
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    closingIssuesReferences(first: 50) {
+                      nodes {
+                        number
+                        projectItems(first: 20) {
+                          nodes {
+                            id
+                            project {
+                              id
+                              title
+                              field(name: "Status") {
+                                ... on ProjectV2SingleSelectField {
+                                  id
+                                  options {
+                                    id
+                                    name
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `, { owner, repo, number: prNumber });
+
+            const issues =
+              data.repository.pullRequest.closingIssuesReferences.nodes;
+
+            for (const issue of issues) {
+              for (const item of issue.projectItems.nodes) {
+                const project = item.project;
+
+                if (project.title !== "Python Task Manager") {
+                  continue;
+                }
+
+                const field = project.field;
+                const done = field?.options.find(
+                  option => option.name === "Done"
+                );
+
+                if (!done) {
+                  throw new Error("Done status option not found.");
+                }
+
+                await github.graphql(`
+                  mutation(
+                    $projectId: ID!,
+                    $itemId: ID!,
+                    $fieldId: ID!,
+                    $optionId: String!
+                  ) {
+                    updateProjectV2ItemFieldValue(input: {
+                      projectId: $projectId
+                      itemId: $itemId
+                      fieldId: $fieldId
+                      value: {
+                        singleSelectOptionId: $optionId
+                      }
+                    }) {
+                      projectV2Item {
+                        id
+                      }
+                    }
+                  }
+                `, {
+                  projectId: project.id,
+                  itemId: item.id,
+                  fieldId: field.id,
+                  optionId: done.id
+                });
+
+                core.info(`Moved issue #${issue.number} to Done`);
+              }
+            }
